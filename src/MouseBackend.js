@@ -1,23 +1,12 @@
-import {createNativeDragSource, matchNativeItemType} from './NativeDragSources';
+import {
+  getEventClientOffset,
+  getNodeClientOffset
+} from './react-dnd-html5-backend/OffsetUtils.js';
 
-function getEventClientOffset(e) {
-  return {
-    x: e.clientX,
-    y: e.clientY
-  };
-}
-
-const ELEMENT_NODE = 1;
-function getNodeClientOffset(node) {
-  const el = node.nodeType === ELEMENT_NODE ? node : node.parentElement;
-
-  if (!el) {
-    return null;
-  }
-
-  const {top, left} = el.getBoundingClientRect();
-  return {x: left, y: top};
-}
+import {
+  createNativeDragSource,
+  matchNativeItemType
+} from './react-dnd-html5-backend/NativeDragSources';
 
 export default class MouseBackend {
   constructor(manager) {
@@ -26,21 +15,18 @@ export default class MouseBackend {
     this.registry = manager.getRegistry();
 
     this.sourceNodes = {};
-    this.sourceNodesOptions = {};
-    this.sourcePreviewNodes = {};
-    this.sourcePreviewNodesOptions = {};
     this.targetNodes = {};
-    this.targetNodeOptions = {};
+
     this.mouseClientOffset = {};
-    this.currentNativeSource = null;
+    this.currentSourceId = null;
+    this.currentNativeHandle = null;
     this.currentNativeHandle = null;
 
+    this.handleStartDrag = this.handleStartDrag.bind(this);
+    this.handleMouseMove = this.handleMouseMove.bind(this);
+    this.handleEndDrag = this.handleEndDrag.bind(this);
     this.getSourceClientOffset = this.getSourceClientOffset.bind(this);
 
-    this.handleMoveStart = this.handleMoveStart.bind(this);
-    this.handleMoveStartCapture = this.handleMoveStartCapture.bind(this);
-    this.handleMoveCapture = this.handleMoveCapture.bind(this);
-    this.handleMoveEndCapture = this.handleMoveEndCapture.bind(this);
     this.handleNativeDrag = this.handleNativeDrag.bind(this);
     this.handleNativeEndDrag = this.handleNativeEndDrag.bind(this);
   }
@@ -55,17 +41,10 @@ export default class MouseBackend {
     }
 
     this.constructor.isSetUp = true;
-    window.addEventListener('mousedown', this.handleMoveStartCapture, true);
-    window.addEventListener('mousedown', this.handleMoveStart);
-    window.addEventListener('mousemove', this.handleMoveCapture, true);
-    window.addEventListener('mouseup', this.handleMoveEndCapture, true);
+
     window.addEventListener('dragover', this.handleNativeDrag, true);
     window.addEventListener('dragleave', this.handleNativeEndDrag, true);
     window.addEventListener('drop', this.handleNativeEndDrag, true);
-  }
-
-  getSourceClientOffset(sourceId) {
-    return getNodeClientOffset(this.sourceNodes[sourceId]);
   }
 
   teardown() {
@@ -75,35 +54,24 @@ export default class MouseBackend {
 
     this.constructor.isSetUp = false;
 
-    this.mouseClientOffset = {};
-    window.removeEventListener('mousedown', this.handleMoveStartCapture, true);
-    window.removeEventListener('mousedown', this.handleMoveStart);
-    window.removeEventListener('mousemove', this.handleMoveCapture, true);
-    window.removeEventListener('mouseup', this.handleMoveEndCapture, true);
+    window.removeEventListener('mousemove', this.handleMouseMove);
+    window.removeEventListener('mouseup', this.handleEndDrag, true);
+
     window.removeEventListener('dragover', this.handleNativeDrag, true);
     window.removeEventListener('dragleave', this.handleNativeEndDrag, true);
     window.removeEventListener('drop', this.handleNativeEndDrag, true);
   }
 
+  //
   connectDragSource(sourceId, node) {
     this.sourceNodes[sourceId] = node;
 
-    const handleMoveStart = this.handleMoveStart.bind(this, sourceId);
-    node.addEventListener('mousedown', handleMoveStart);
+    const handleStartDrag = this.handleStartDrag.bind(this, sourceId);
+    node.addEventListener('mousedown', handleStartDrag);
 
     return () => {
       delete this.sourceNodes[sourceId];
-      node.removeEventListener('mousedown', handleMoveStart);
-    };
-  }
-
-  connectDragPreview(sourceId, node, options) {
-    this.sourcePreviewNodesOptions[sourceId] = options;
-    this.sourcePreviewNodes[sourceId] = node;
-
-    return () => {
-      delete this.sourcePreviewNodes[sourceId];
-      delete this.sourcePreviewNodesOptions[sourceId];
+      node.removeEventListener('mousedown', handleStartDrag);
     };
   }
 
@@ -115,55 +83,71 @@ export default class MouseBackend {
     };
   }
 
-  handleMoveStartCapture() {
-    this.moveStartSourceIds = [];
-  }
+  connectDragPreview() {}
 
-  handleMoveStart(sourceId) {
-    this.moveStartSourceIds.unshift(sourceId);
-  }
-
-  handleMoveStart(e) {
+  //
+  handleStartDrag(sourceId, e) {
     const clientOffset = getEventClientOffset(e);
-    if (clientOffset) {
-      this.mouseClientOffset = clientOffset;
+
+    if (!clientOffset) {
+      return null;
     }
+
+    this.currentSourceId = sourceId;
+    this.mouseClientOffset = clientOffset;
+
+    window.addEventListener('mousemove', this.handleMouseMove);
+    window.addEventListener('mouseup', this.handleEndDrag, true);
   }
 
-  handleMoveCapture(e) {
-    const {moveStartSourceIds} = this;
+  handleMouseMove(e) {
+    const {currentSourceId} = this;
     const clientOffset = getEventClientOffset(e);
-    if (!clientOffset) return;
-    if (
-      !this.monitor.isDragging() &&
-      this.mouseClientOffset.hasOwnProperty('x') &&
-      moveStartSourceIds &&
-      (this.mouseClientOffset.x !== clientOffset.x ||
-        this.mouseClientOffset.y !== clientOffset.y)
-    ) {
-      this.moveStartSourceIds = null;
-      this.actions.beginDrag(moveStartSourceIds, {
+
+    if (currentSourceId == null || !clientOffset) {
+      return;
+    }
+
+    if (!this.monitor.isDragging()) {
+      if (
+        this.mouseClientOffset.x == clientOffset.x &&
+        this.mouseClientOffset.y == clientOffset.y
+      ) {
+        return;
+      }
+
+      this.actions.beginDrag([currentSourceId], {
         clientOffset: this.mouseClientOffset,
         getSourceClientOffset: this.getSourceClientOffset,
         publishSource: false
       });
     }
-    if (!this.monitor.isDragging()) {
-      return;
-    }
-
-    const sourceNode = this.sourceNodes[this.monitor.getSourceId()];
-    this.installSourceNodeRemovalObserver(sourceNode);
 
     this.actions.publishDragSource();
 
-    e.preventDefault();
-
     const matchingTargetIds = this.getMatchingTargetIds(clientOffset);
-
     this.actions.hover(matchingTargetIds, {
       clientOffset
     });
+  }
+
+  handleEndDrag(e) {
+    e.preventDefault();
+    this.currentSourceId = null;
+    this.mouseClientOffset = {};
+
+    window.removeEventListener('mousemove', this.handleMouseMove);
+    window.removeEventListener('mouseup', this.handleEndDrag, true);
+
+    if (this.monitor.isDragging()) {
+      this.actions.drop();
+      this.actions.endDrag();
+    }
+  }
+
+  //
+  getSourceClientOffset(sourceId) {
+    return getNodeClientOffset(this.sourceNodes[sourceId]);
   }
 
   getMatchingTargetIds(clientOffset) {
@@ -178,56 +162,7 @@ export default class MouseBackend {
     });
   }
 
-  handleMoveEndCapture(e) {
-    if (!this.monitor.isDragging() || this.monitor.didDrop()) {
-      this.moveStartSourceIds = null;
-      return;
-    }
-
-    e.preventDefault();
-
-    this.mouseClientOffset = {};
-
-    this.uninstallSourceNodeRemovalObserver();
-    this.actions.drop();
-    this.actions.endDrag();
-  }
-
-  installSourceNodeRemovalObserver(node) {
-    this.uninstallSourceNodeRemovalObserver();
-
-    this.draggedSourceNode = node;
-    this.draggedSourceNodeRemovalObserver = new window.MutationObserver(() => {
-      if (!node.parentElement) {
-        this.resurrectSourceNode();
-        this.uninstallSourceNodeRemovalObserver();
-      }
-    });
-
-    if (!node || !node.parentElement) {
-      return;
-    }
-
-    this.draggedSourceNodeRemovalObserver.observe(node.parentElement, {
-      childList: true
-    });
-  }
-
-  resurrectSourceNode() {
-    this.draggedSourceNode.style.display = 'none';
-    this.draggedSourceNode.removeAttribute('data-reactid');
-    document.body.appendChild(this.draggedSourceNode);
-  }
-
-  uninstallSourceNodeRemovalObserver() {
-    if (this.draggedSourceNodeRemovalObserver) {
-      this.draggedSourceNodeRemovalObserver.disconnect();
-    }
-
-    this.draggedSourceNodeRemovalObserver = null;
-    this.draggedSourceNode = null;
-  }
-
+  //
   handleNativeDrag(e) {
     const nativeType = matchNativeItemType(e.dataTransfer);
     if (!nativeType) {
@@ -236,10 +171,10 @@ export default class MouseBackend {
 
     if (!this.monitor.isDragging()) {
       const SourceType = createNativeDragSource(nativeType);
-      this.currentNativeSource = new SourceType();
+      this.currentNativeHandle = new SourceType();
       this.currentNativeHandle = this.registry.addSource(
         nativeType,
-        this.currentNativeSource
+        this.currentNativeHandle
       );
 
       this.actions.beginDrag([this.currentNativeHandle]);
@@ -268,14 +203,14 @@ export default class MouseBackend {
 
     if (e.type == 'drop') {
       e.preventDefault();
-      this.currentNativeSource.mutateItemByReadingDataTransfer(e.dataTransfer);
+      this.currentNativeHandle.mutateItemByReadingDataTransfer(e.dataTransfer);
       this.actions.drop();
     }
 
     this.actions.endDrag();
     this.registry.removeSource(this.currentNativeHandle);
 
-    this.currentNativeSource = null;
+    this.currentNativeHandle = null;
     this.currentNativeHandle = null;
   }
 }

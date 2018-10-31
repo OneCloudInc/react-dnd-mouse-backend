@@ -1,8 +1,4 @@
-export const NativeTypes = {
-  FILE: '__NATIVE_FILE__',
-  URL: '__NATIVE_URL__',
-  TEXT: '__NATIVE_TEXT__'
-};
+import * as NativeTypes from './NativeTypes';
 
 function getDataFromDataTransfer(dataTransfer, typesToTry, defaultValue) {
   const result = typesToTry.reduce(

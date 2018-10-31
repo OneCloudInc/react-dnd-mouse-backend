@@ -56,6 +56,7 @@ export default class MouseBackend {
 
     window.removeEventListener('mousemove', this.handleMouseMove);
     window.removeEventListener('mouseup', this.handleEndDrag, true);
+    window.removeEventListener('contextmenu', this.handleContextMenu, true);
 
     window.removeEventListener('dragover', this.handleNativeDrag, true);
     window.removeEventListener('dragleave', this.handleNativeEndDrag, true);
@@ -87,8 +88,11 @@ export default class MouseBackend {
 
   //
   handleStartDrag(sourceId, e) {
-    const clientOffset = getEventClientOffset(e);
+    if (e.which == 3) {
+      return;
+    }
 
+    const clientOffset = getEventClientOffset(e);
     if (!clientOffset) {
       return null;
     }
@@ -98,6 +102,7 @@ export default class MouseBackend {
 
     window.addEventListener('mousemove', this.handleMouseMove);
     window.addEventListener('mouseup', this.handleEndDrag, true);
+    window.addEventListener('contextmenu', this.handleContextMenu, true);
   }
 
   handleMouseMove(e) {
@@ -132,17 +137,26 @@ export default class MouseBackend {
   }
 
   handleEndDrag(e) {
+    if (e.which == 3) {
+      return;
+    }
+
     e.preventDefault();
     this.currentSourceId = null;
     this.mouseClientOffset = {};
 
     window.removeEventListener('mousemove', this.handleMouseMove);
     window.removeEventListener('mouseup', this.handleEndDrag, true);
+    window.removeEventListener('contextmenu', this.handleContextMenu, true);
 
     if (this.monitor.isDragging()) {
       this.actions.drop();
       this.actions.endDrag();
     }
+  }
+
+  handleContextMenu(e) {
+    e.preventDefault();
   }
 
   //

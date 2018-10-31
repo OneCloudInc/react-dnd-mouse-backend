@@ -155,9 +155,9 @@ export default class MouseBackend {
       const boundingRect = this.targetNodes[targetId].getBoundingClientRect();
       return (
         clientOffset.x >= boundingRect.left &&
-        clientOffset.x <= boundingRect.right &&
+        clientOffset.x < boundingRect.right &&
         clientOffset.y >= boundingRect.top &&
-        clientOffset.y <= boundingRect.bottom
+        clientOffset.y < boundingRect.bottom
       );
     });
   }

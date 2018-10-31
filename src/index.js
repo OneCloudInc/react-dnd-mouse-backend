@@ -1,8 +1,8 @@
-import MouseBackend from './MouseBackend'
-import { NativeTypes } from './NativeDragSources'
+import MouseBackend from './MouseBackend';
+import {NativeTypes} from './NativeDragSources';
 
-const createMouseBackend = (manager) => new MouseBackend(manager)
+const createMouseBackend = manager => new MouseBackend(manager);
 
-export default createMouseBackend
+export default createMouseBackend;
 
-export { NativeTypes }
+export {NativeTypes};

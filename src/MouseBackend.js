@@ -1,7 +1,4 @@
-import {
-  createNativeDragSource,
-  matchNativeItemType
-} from "./NativeDragSources";
+import {createNativeDragSource, matchNativeItemType} from './NativeDragSources';
 
 function getEventClientOffset(e) {
   return {
@@ -18,8 +15,8 @@ function getNodeClientOffset(node) {
     return null;
   }
 
-  const { top, left } = el.getBoundingClientRect();
-  return { x: left, y: top };
+  const {top, left} = el.getBoundingClientRect();
+  return {x: left, y: top};
 }
 
 export default class MouseBackend {
@@ -40,39 +37,31 @@ export default class MouseBackend {
 
     this.getSourceClientOffset = this.getSourceClientOffset.bind(this);
 
-    this.handleWindowMoveStart = this.handleWindowMoveStart.bind(this);
-    this.handleWindowMoveStartCapture = this.handleWindowMoveStartCapture.bind(
-      this
-    );
-    this.handleWindowMoveCapture = this.handleWindowMoveCapture.bind(this);
-    this.handleWindowMoveEndCapture = this.handleWindowMoveEndCapture.bind(
-      this
-    );
-    this.handleWindowNativeDrag = this.handleWindowNativeDrag.bind(this);
-    this.handleWindowNativeEndDrag = this.handleWindowNativeEndDrag.bind(this);
+    this.handleMoveStart = this.handleMoveStart.bind(this);
+    this.handleMoveStartCapture = this.handleMoveStartCapture.bind(this);
+    this.handleMoveCapture = this.handleMoveCapture.bind(this);
+    this.handleMoveEndCapture = this.handleMoveEndCapture.bind(this);
+    this.handleNativeDrag = this.handleNativeDrag.bind(this);
+    this.handleNativeEndDrag = this.handleNativeEndDrag.bind(this);
   }
 
   setup() {
-    if (typeof window === "undefined") {
+    if (typeof window === 'undefined') {
       return;
     }
 
     if (this.constructor.isSetUp) {
-      throw new Error("Cannot have two DnD Mouse backend at the same time");
+      throw new Error('Cannot have two DnD Mouse backend at the same time');
     }
 
     this.constructor.isSetUp = true;
-    window.addEventListener(
-      "mousedown",
-      this.handleWindowMoveStartCapture,
-      true
-    );
-    window.addEventListener("mousedown", this.handleWindowMoveStart);
-    window.addEventListener("mousemove", this.handleWindowMoveCapture, true);
-    window.addEventListener("mouseup", this.handleWindowMoveEndCapture, true);
-    window.addEventListener("dragover", this.handleWindowNativeDrag, true);
-    window.addEventListener("dragleave", this.handleWindowNativeEndDrag, true);
-    window.addEventListener("drop", this.handleWindowNativeEndDrag, true);
+    window.addEventListener('mousedown', this.handleMoveStartCapture, true);
+    window.addEventListener('mousedown', this.handleMoveStart);
+    window.addEventListener('mousemove', this.handleMoveCapture, true);
+    window.addEventListener('mouseup', this.handleMoveEndCapture, true);
+    window.addEventListener('dragover', this.handleNativeDrag, true);
+    window.addEventListener('dragleave', this.handleNativeEndDrag, true);
+    window.addEventListener('drop', this.handleNativeEndDrag, true);
   }
 
   getSourceClientOffset(sourceId) {
@@ -80,43 +69,31 @@ export default class MouseBackend {
   }
 
   teardown() {
-    if (typeof window === "undefined") {
+    if (typeof window === 'undefined') {
       return;
     }
 
     this.constructor.isSetUp = false;
 
     this.mouseClientOffset = {};
-    window.removeEventListener(
-      "mousedown",
-      this.handleWindowMoveStartCapture,
-      true
-    );
-    window.removeEventListener("mousedown", this.handleWindowMoveStart);
-    window.removeEventListener("mousemove", this.handleWindowMoveCapture, true);
-    window.removeEventListener(
-      "mouseup",
-      this.handleWindowMoveEndCapture,
-      true
-    );
-    window.removeEventListener("dragover", this.handleWindowNativeDrag, true);
-    window.removeEventListener(
-      "dragleave",
-      this.handleWindowNativeEndDrag,
-      true
-    );
-    window.removeEventListener("drop", this.handleWindowNativeEndDrag, true);
+    window.removeEventListener('mousedown', this.handleMoveStartCapture, true);
+    window.removeEventListener('mousedown', this.handleMoveStart);
+    window.removeEventListener('mousemove', this.handleMoveCapture, true);
+    window.removeEventListener('mouseup', this.handleMoveEndCapture, true);
+    window.removeEventListener('dragover', this.handleNativeDrag, true);
+    window.removeEventListener('dragleave', this.handleNativeEndDrag, true);
+    window.removeEventListener('drop', this.handleNativeEndDrag, true);
   }
 
   connectDragSource(sourceId, node) {
     this.sourceNodes[sourceId] = node;
 
     const handleMoveStart = this.handleMoveStart.bind(this, sourceId);
-    node.addEventListener("mousedown", handleMoveStart);
+    node.addEventListener('mousedown', handleMoveStart);
 
     return () => {
       delete this.sourceNodes[sourceId];
-      node.removeEventListener("mousedown", handleMoveStart);
+      node.removeEventListener('mousedown', handleMoveStart);
     };
   }
 
@@ -138,7 +115,7 @@ export default class MouseBackend {
     };
   }
 
-  handleWindowMoveStartCapture() {
+  handleMoveStartCapture() {
     this.moveStartSourceIds = [];
   }
 
@@ -146,20 +123,20 @@ export default class MouseBackend {
     this.moveStartSourceIds.unshift(sourceId);
   }
 
-  handleWindowMoveStart(e) {
+  handleMoveStart(e) {
     const clientOffset = getEventClientOffset(e);
     if (clientOffset) {
       this.mouseClientOffset = clientOffset;
     }
   }
 
-  handleWindowMoveCapture(e) {
-    const { moveStartSourceIds } = this;
+  handleMoveCapture(e) {
+    const {moveStartSourceIds} = this;
     const clientOffset = getEventClientOffset(e);
     if (!clientOffset) return;
     if (
       !this.monitor.isDragging() &&
-      this.mouseClientOffset.hasOwnProperty("x") &&
+      this.mouseClientOffset.hasOwnProperty('x') &&
       moveStartSourceIds &&
       (this.mouseClientOffset.x !== clientOffset.x ||
         this.mouseClientOffset.y !== clientOffset.y)
@@ -201,7 +178,7 @@ export default class MouseBackend {
     });
   }
 
-  handleWindowMoveEndCapture(e) {
+  handleMoveEndCapture(e) {
     if (!this.monitor.isDragging() || this.monitor.didDrop()) {
       this.moveStartSourceIds = null;
       return;
@@ -237,8 +214,8 @@ export default class MouseBackend {
   }
 
   resurrectSourceNode() {
-    this.draggedSourceNode.style.display = "none";
-    this.draggedSourceNode.removeAttribute("data-reactid");
+    this.draggedSourceNode.style.display = 'none';
+    this.draggedSourceNode.removeAttribute('data-reactid');
     document.body.appendChild(this.draggedSourceNode);
   }
 
@@ -251,7 +228,7 @@ export default class MouseBackend {
     this.draggedSourceNode = null;
   }
 
-  handleWindowNativeDrag(e) {
+  handleNativeDrag(e) {
     const nativeType = matchNativeItemType(e.dataTransfer);
     if (!nativeType) {
       return;
@@ -271,7 +248,7 @@ export default class MouseBackend {
     const clientOffset = getEventClientOffset(e);
     this.actions.publishDragSource();
     e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
+    e.dataTransfer.dropEffect = 'copy';
 
     const matchingTargetIds = this.getMatchingTargetIds(clientOffset);
     this.actions.hover(matchingTargetIds, {
@@ -279,17 +256,17 @@ export default class MouseBackend {
     });
   }
 
-  handleWindowNativeEndDrag(e) {
+  handleNativeEndDrag(e) {
     const nativeType = matchNativeItemType(e.dataTransfer);
     if (!nativeType) {
       return null;
     }
 
-    if (e.type !== "drop" && e.relatedTarget !== null) {
+    if (e.type !== 'drop' && e.relatedTarget !== null) {
       return;
     }
 
-    if (e.type == "drop") {
+    if (e.type == 'drop') {
       e.preventDefault();
       this.currentNativeSource.mutateItemByReadingDataTransfer(e.dataTransfer);
       this.actions.drop();

@@ -2,27 +2,22 @@ export const NativeTypes = {
   FILE: '__NATIVE_FILE__',
   URL: '__NATIVE_URL__',
   TEXT: '__NATIVE_TEXT__'
-}
+};
 
-function getDataFromDataTransfer(
-  dataTransfer,
-  typesToTry,
-  defaultValue,
-) {
+function getDataFromDataTransfer(dataTransfer, typesToTry, defaultValue) {
   const result = typesToTry.reduce(
     (resultSoFar, typeToTry) => resultSoFar || dataTransfer.getData(typeToTry),
     null
-  )
+  );
 
-  return result != null ? result : defaultValue
+  return result != null ? result : defaultValue;
 }
 
 const nativeTypesConfig = {
   [NativeTypes.FILE]: {
     exposeProperty: 'files',
     matchesTypes: ['Files'],
-    getData: (dataTransfer) =>
-      Array.prototype.slice.call(dataTransfer.files)
+    getData: dataTransfer => Array.prototype.slice.call(dataTransfer.files)
   },
   [NativeTypes.URL]: {
     exposeProperty: 'urls',
@@ -36,10 +31,10 @@ const nativeTypesConfig = {
     getData: (dataTransfer, matchesTypes) =>
       getDataFromDataTransfer(dataTransfer, matchesTypes, '')
   }
-}
+};
 
 export function createNativeDragSource(type) {
-  const { exposeProperty, matchesTypes, getData } = nativeTypesConfig[type]
+  const {exposeProperty, matchesTypes, getData} = nativeTypesConfig[type];
 
   return class NativeDragSource {
     constructor() {
@@ -48,44 +43,44 @@ export function createNativeDragSource(type) {
           // tslint:disable-next-line no-console
           console.warn(
             `Browser doesn't allow reading "${exposeProperty}" until the drop event.`
-          )
-          return null
+          );
+          return null;
         }
-      }
+      };
     }
 
     mutateItemByReadingDataTransfer(dataTransfer) {
-      delete this.item[exposeProperty]
-      this.item[exposeProperty] = getData(dataTransfer, matchesTypes)
+      delete this.item[exposeProperty];
+      this.item[exposeProperty] = getData(dataTransfer, matchesTypes);
     }
 
     canDrag() {
-      return true
+      return true;
     }
 
     beginDrag() {
-      return this.item
+      return this.item;
     }
 
     isDragging(monitor, handle) {
-      return handle === monitor.getSourceId()
+      return handle === monitor.getSourceId();
     }
 
     endDrag() {
       // empty
     }
-  }
+  };
 }
 
 export function matchNativeItemType(dataTransfer) {
-  const dataTransferTypes = Array.prototype.slice.call(dataTransfer.types || [])
+  const dataTransferTypes = Array.prototype.slice.call(
+    dataTransfer.types || []
+  );
 
   return (
     Object.keys(nativeTypesConfig).filter(nativeItemType => {
-      const { matchesTypes } = nativeTypesConfig[nativeItemType]
-      return (matchesTypes).some(
-        t => dataTransferTypes.indexOf(t) > -1
-      )
+      const {matchesTypes} = nativeTypesConfig[nativeItemType];
+      return matchesTypes.some(t => dataTransferTypes.indexOf(t) > -1);
     })[0] || null
-  )
+  );
 }

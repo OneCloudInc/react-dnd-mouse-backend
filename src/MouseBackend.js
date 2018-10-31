@@ -110,8 +110,8 @@ export default class MouseBackend {
 
     if (!this.monitor.isDragging()) {
       if (
-        this.mouseClientOffset.x == clientOffset.x &&
-        this.mouseClientOffset.y == clientOffset.y
+        Math.abs(this.mouseClientOffset.x - clientOffset.x) < 4 &&
+        Math.abs(this.mouseClientOffset.y - clientOffset.y) < 4
       ) {
         return;
       }

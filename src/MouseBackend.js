@@ -53,10 +53,7 @@ export default class MouseBackend {
     }
 
     this.constructor.isSetUp = false;
-
-    window.removeEventListener('mousemove', this.handleMouseMove);
-    window.removeEventListener('mouseup', this.handleEndDrag, true);
-    window.removeEventListener('contextmenu', this.handleContextMenu, true);
+    this.removeDragCaptureListeners();
 
     window.removeEventListener('dragover', this.handleNativeDrag, true);
     window.removeEventListener('dragleave', this.handleNativeEndDrag, true);
@@ -99,10 +96,7 @@ export default class MouseBackend {
 
     this.currentSourceId = sourceId;
     this.mouseClientOffset = clientOffset;
-
-    window.addEventListener('mousemove', this.handleMouseMove);
-    window.addEventListener('mouseup', this.handleEndDrag, true);
-    window.addEventListener('contextmenu', this.handleContextMenu, true);
+    this.addDragCaptureListeners();
   }
 
   handleMouseMove(e) {
@@ -144,10 +138,7 @@ export default class MouseBackend {
     e.preventDefault();
     this.currentSourceId = null;
     this.mouseClientOffset = {};
-
-    window.removeEventListener('mousemove', this.handleMouseMove);
-    window.removeEventListener('mouseup', this.handleEndDrag, true);
-    window.removeEventListener('contextmenu', this.handleContextMenu, true);
+    this.removeDragCaptureListeners();
 
     if (this.monitor.isDragging()) {
       this.actions.drop();
@@ -155,11 +146,25 @@ export default class MouseBackend {
     }
   }
 
-  handleContextMenu(e) {
+  preventDefault(e) {
     e.preventDefault();
   }
 
   //
+  addDragCaptureListeners() {
+    window.addEventListener('mousemove', this.handleMouseMove);
+    window.addEventListener('mouseup', this.handleEndDrag, true);
+    window.addEventListener('contextmenu', this.preventDefault, true);
+    window.addEventListener('dragstart', this.preventDefault, true);
+  }
+
+  removeDragCaptureListeners() {
+    window.removeEventListener('mousemove', this.handleMouseMove);
+    window.removeEventListener('mouseup', this.handleEndDrag, true);
+    window.removeEventListener('contextmenu', this.preventDefault, true);
+    window.removeEventListener('dragstart', this.preventDefault, true);
+  }
+
   getSourceClientOffset(sourceId) {
     return getNodeClientOffset(this.sourceNodes[sourceId]);
   }

@@ -190,21 +190,21 @@ export default class MouseBackend {
 
     if (!this.monitor.isDragging()) {
       const SourceType = createNativeDragSource(nativeType);
-      this.currentNativeHandle = new SourceType();
+      this.currentNativeSource = new SourceType();
       this.currentNativeHandle = this.registry.addSource(
         nativeType,
-        this.currentNativeHandle
+        this.currentNativeSource
       );
 
       this.actions.beginDrag([this.currentNativeHandle]);
     }
 
-    const clientOffset = getEventClientOffset(e);
-    this.actions.publishDragSource();
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
 
+    const clientOffset = getEventClientOffset(e);
     const matchingTargetIds = this.getMatchingTargetIds(clientOffset);
+    this.actions.publishDragSource();
     this.actions.hover(matchingTargetIds, {
       clientOffset
     });
@@ -222,7 +222,7 @@ export default class MouseBackend {
 
     if (e.type == 'drop') {
       e.preventDefault();
-      this.currentNativeHandle.mutateItemByReadingDataTransfer(e.dataTransfer);
+      this.currentNativeSource.mutateItemByReadingDataTransfer(e.dataTransfer);
       this.actions.drop();
     }
 

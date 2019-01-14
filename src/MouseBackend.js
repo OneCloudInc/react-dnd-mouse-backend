@@ -19,7 +19,7 @@ export default class MouseBackend {
 
     this.mouseClientOffset = {};
     this.currentSourceId = null;
-    this.currentNativeHandle = null;
+    this.currentNativeSource = null;
     this.currentNativeHandle = null;
 
     this.handleStartDrag = this.handleStartDrag.bind(this);
@@ -229,7 +229,7 @@ export default class MouseBackend {
     this.actions.endDrag();
     this.registry.removeSource(this.currentNativeHandle);
 
-    this.currentNativeHandle = null;
+    this.currentNativeSource = null;
     this.currentNativeHandle = null;
   }
 }

@@ -89,6 +89,8 @@ export default class MouseBackend {
       return;
     }
 
+    e.preventDefault();
+
     const clientOffset = getEventClientOffset(e);
     if (!clientOffset) {
       return null;
@@ -162,7 +164,6 @@ export default class MouseBackend {
     window.removeEventListener('mousemove', this.handleMouseMove);
     window.removeEventListener('mouseup', this.handleEndDrag, true);
     window.removeEventListener('contextmenu', this.preventDefault, true);
-    window.removeEventListener('dragstart', this.preventDefault, true);
   }
 
   getSourceClientOffset(sourceId) {

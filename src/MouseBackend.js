@@ -42,6 +42,7 @@ export default class MouseBackend {
 
     this.constructor.isSetUp = true;
 
+    window.addEventListener('dragenter', this.handleNativeDrag, true);
     window.addEventListener('dragover', this.handleNativeDrag, true);
     window.addEventListener('dragleave', this.handleNativeEndDrag, true);
     window.addEventListener('drop', this.handleNativeEndDrag, true);
@@ -55,6 +56,7 @@ export default class MouseBackend {
     this.constructor.isSetUp = false;
     this.removeDragCaptureListeners();
 
+    window.removeEventListener('dragenter', this.handleNativeDrag, true);
     window.removeEventListener('dragover', this.handleNativeDrag, true);
     window.removeEventListener('dragleave', this.handleNativeEndDrag, true);
     window.removeEventListener('drop', this.handleNativeEndDrag, true);

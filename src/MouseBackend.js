@@ -24,7 +24,10 @@ export default class MouseBackend {
 
     this.handleStartDrag = this.handleStartDrag.bind(this);
     this.handleMouseMove = this.handleMouseMove.bind(this);
-    this.handleEndDrag = this.handleEndDrag.bind(this);
+    this.handleMouseUp = this.handleMouseUp.bind(this);
+    this.handleKeydown = this.handleKeydown.bind(this);
+    this.preventNextClick = this.preventNextClick.bind(this);
+    this.preventNextMouseUp = this.preventNextMouseUp.bind(this);
     this.getSourceClientOffset = this.getSourceClientOffset.bind(this);
 
     this.handleNativeDrag = this.handleNativeDrag.bind(this);
@@ -134,18 +137,30 @@ export default class MouseBackend {
     });
   }
 
-  handleEndDrag(e) {
-    if (e.which == 3) {
-      return;
+  handleMouseUp(e) {
+    if (e.which !== 3) {
+      e.preventDefault();
+      this.endDrag();
     }
+  }
 
-    e.preventDefault();
+  handleKeydown(e) {
+    if (e.code == 'Escape') {
+      this.endDrag(true);
+      window.addEventListener('click', this.preventNextClick, true);
+      window.addEventListener('mouseup', this.preventNextMouseUp, true);
+    }
+  }
+
+  endDrag(aborted = false) {
     this.currentSourceId = null;
     this.mouseClientOffset = {};
     this.removeDragCaptureListeners();
 
     if (this.monitor.isDragging()) {
-      this.actions.drop();
+      if (!aborted) {
+        this.actions.drop();
+      }
       this.actions.endDrag();
     }
   }
@@ -154,18 +169,31 @@ export default class MouseBackend {
     e.preventDefault();
   }
 
+  preventNextClick(e) {
+    e.stopPropagation();
+    window.removeEventListener('click', this.preventNextClick, true);
+  }
+
+  preventNextMouseUp(e) {
+    e.stopPropagation();
+    window.removeEventListener('mouseup', this.preventNextMouseUp, true);
+  }
+
   //
   addDragCaptureListeners() {
     window.addEventListener('mousemove', this.handleMouseMove);
-    window.addEventListener('mouseup', this.handleEndDrag, true);
+    window.addEventListener('mouseup', this.handleMouseUp, true);
+    window.addEventListener('keydown', this.handleKeydown);
     window.addEventListener('contextmenu', this.preventDefault, true);
     window.addEventListener('dragstart', this.preventDefault, true);
   }
 
   removeDragCaptureListeners() {
     window.removeEventListener('mousemove', this.handleMouseMove);
-    window.removeEventListener('mouseup', this.handleEndDrag, true);
+    window.removeEventListener('mouseup', this.handleMouseUp, true);
+    window.removeEventListener('keydown', this.handleKeydown);
     window.removeEventListener('contextmenu', this.preventDefault, true);
+    window.removeEventListener('dragstart', this.preventDefault, true);
   }
 
   getSourceClientOffset(sourceId) {

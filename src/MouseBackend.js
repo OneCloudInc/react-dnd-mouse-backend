@@ -95,6 +95,7 @@ export default class MouseBackend {
     }
 
     e.preventDefault();
+    e.stopPropagation();
 
     const clientOffset = getEventClientOffset(e);
     if (!clientOffset) {

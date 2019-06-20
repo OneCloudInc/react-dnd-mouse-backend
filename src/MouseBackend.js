@@ -22,7 +22,6 @@ export default class MouseBackend {
     this.currentNativeSource = null;
     this.currentNativeHandle = null;
 
-    this.handleStartDrag = this.handleStartDrag.bind(this);
     this.handleMouseMove = this.handleMouseMove.bind(this);
     this.handleMouseUp = this.handleMouseUp.bind(this);
     this.handleKeydown = this.handleKeydown.bind(this);
@@ -86,11 +85,13 @@ export default class MouseBackend {
     };
   }
 
-  connectDragPreview() {}
-
   //
   handleStartDrag(sourceId, e) {
     if (e.which == 3) {
+      return;
+    }
+
+    if (!this.monitor.canDragSource(sourceId)) {
       return;
     }
 
@@ -132,7 +133,7 @@ export default class MouseBackend {
 
     this.actions.publishDragSource();
 
-    const matchingTargetIds = this.getMatchingTargetIds(clientOffset);
+    const matchingTargetIds = this.getMatchingTargetIds(e);
     this.actions.hover(matchingTargetIds, {
       clientOffset
     });
@@ -201,16 +202,11 @@ export default class MouseBackend {
     return getNodeClientOffset(this.sourceNodes[sourceId]);
   }
 
-  getMatchingTargetIds(clientOffset) {
-    return Object.keys(this.targetNodes).filter(targetId => {
-      const boundingRect = this.targetNodes[targetId].getBoundingClientRect();
-      return (
-        clientOffset.x >= boundingRect.left &&
-        clientOffset.x < boundingRect.right &&
-        clientOffset.y >= boundingRect.top &&
-        clientOffset.y < boundingRect.bottom
-      );
-    });
+  getMatchingTargetIds(e) {
+    return Object.entries(this.targetNodes)
+      .filter(([, node]) => node.contains(e.target))
+      .sort(([, nodeA], [, nodeB]) => (nodeA.contains(nodeB) ? -1 : 1))
+      .map(([id]) => id);
   }
 
   //
@@ -235,7 +231,7 @@ export default class MouseBackend {
     e.dataTransfer.dropEffect = 'copy';
 
     const clientOffset = getEventClientOffset(e);
-    const matchingTargetIds = this.getMatchingTargetIds(clientOffset);
+    const matchingTargetIds = this.getMatchingTargetIds(e);
     this.actions.publishDragSource();
     this.actions.hover(matchingTargetIds, {
       clientOffset
